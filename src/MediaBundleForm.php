@@ -8,7 +8,7 @@
 namespace Drupal\media_entity;
 
 use Drupal\Core\Entity\EntityForm;
-use Drupal\Component\Utility\String;
+use Drupal\Component\Utility\SafeMarkup;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Render\Element;
@@ -23,10 +23,12 @@ class MediaBundleForm extends EntityForm {
    */
   public function form(array $form, FormStateInterface $form_state) {
     $form = parent::form($form, $form_state);
+
     /** @var \Drupal\media_entity\MediaBundleInterface $bundle */
-    $bundle = $this->entity;
+    $form['#entity'] = $bundle = $this->entity;
+
     if ($this->operation == 'add') {
-      $form['#title'] = String::checkPlain($this->t('Add media bundle'));
+      $form['#title'] = SafeMarkup::checkPlain($this->t('Add media bundle'));
     }
     elseif ($this->operation == 'edit') {
       $form['#title'] = $this->t('Edit %label media bundle', array('%label' => $bundle->label()));
@@ -94,7 +96,7 @@ class MediaBundleForm extends EntityForm {
       $form['type_configuration'][$plugin] += \Drupal::service('plugin.manager.media_entity.type')->createInstance($plugin, $plugin_configuration)->settingsForm($this->entity);
     }
 
-    return parent::form($form, $form_state);
+    return $form;
   }
 
   /**
@@ -127,12 +129,9 @@ class MediaBundleForm extends EntityForm {
   public function save(array $form, FormStateInterface $form_state) {
     /** @var  \Drupal\media_entity\MediaBundleInterface $bundle */
     $bundle = $this->entity;
-    $bundle->id = trim($bundle->id());
-
     $status = $bundle->save();
 
     $t_args = array('%name' => $bundle->label());
-
     if ($status == SAVED_UPDATED) {
       drupal_set_message(t('The media bundle %name has been updated.', $t_args));
     }
@@ -141,14 +140,7 @@ class MediaBundleForm extends EntityForm {
       $this->logger('media')->notice('Added bundle %name.', $t_args);
     }
 
-    $form_state->setRedirect('media.overview_bundles');
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function delete(array $form, FormStateInterface $form_state) {
-    $form_state->setRedirect('entity.media_bundle.delete_form', array('media_bundle' => $this->entity->id()));
+    $form_state->setRedirectUrl($bundle->urlInfo('collection'));
   }
 
 }
